@@ -13,7 +13,7 @@ func main() {
 	config := utils.ConfigSetup()
 	appCfg := config.App
 	dbCfg := config.Postgres
-	db, err := sql.Open(appCfg.DbName, utils.GeneratePostgresConnectionString(dbCfg))
+	db, err := sql.Open(appCfg.DbType, utils.GeneratePostgresConnectionString(dbCfg))
 	if err != nil {
 		log.Fatal("Failed to connect to the database:", err)
 	}
