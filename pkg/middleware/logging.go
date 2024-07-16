@@ -1,13 +1,13 @@
 package middleware
 
 import (
+	"github.com/labstack/echo/v4"
 	"log"
-	"net/http"
 	"os"
 )
 
-func LoggingMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func LoggingMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
 		f, err := os.OpenFile("logs/logstash.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			log.Println("Error opening log file:", err)
@@ -15,7 +15,7 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 		defer f.Close()
 
 		logger := log.New(f, "", log.LstdFlags)
-		logger.Printf("%s %s %s", r.Method, r.RequestURI, r.RemoteAddr)
-		next.ServeHTTP(w, r)
-	})
+		logger.Printf("%s %s %s", c.Request().Method, c.Request().RequestURI, c.Request().RemoteAddr)
+		return next(c)
+	}
 }

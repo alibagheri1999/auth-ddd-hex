@@ -1,29 +1,38 @@
-package cmd
+package main
 
 import (
+	"DDD-HEX/cmd/server"
+	"DDD-HEX/cmd/setup"
+	"DDD-HEX/internal/adapters/db/postgres"
+	"DDD-HEX/internal/adapters/db/redis"
 	"DDD-HEX/internal/application/utils"
-	"database/sql"
+	middlewares "DDD-HEX/pkg/middleware"
+	"github.com/labstack/echo/v4/middleware"
 	_ "github.com/lib/pq"
-	"github.com/sirupsen/logrus"
 	"log"
-	"net/http"
+	"time"
 )
 
 func main() {
 	config := utils.ConfigSetup()
 	appCfg := config.App
 	dbCfg := config.Postgres
-	db, err := sql.Open(appCfg.DbType, utils.GeneratePostgresConnectionString(dbCfg))
+	cacheCfg := config.Redis
+	cache := redis.NewRedisClient(cacheCfg)
+	db, err := postgres.NewRepositories(appCfg, dbCfg)
 	if err != nil {
 		log.Fatal("Failed to connect to the database:", err)
 	}
-
-	userRepository, authRepository, productRepository := setupRepositories(db)
-	userService, authService, productService := setupServices(userRepository, authRepository, productRepository, appCfg)
-	router := setupHandlers(userService, authService, productService)
-
-	logrus.Info("Starting server on :8080")
-	if err := http.ListenAndServe(":8080", router); err != nil {
-		log.Fatal("Failed to start server:", err)
-	}
+	userRepository, authRepository, cacheRepository := setup.SetupRepositories(db, cache)
+	userService, authService := setup.SetupServices(userRepository, authRepository, cacheRepository, appCfg)
+	handlers := setup.NewHandler(userService, authService)
+	router := server.NewRouter()
+	router.Use(middlewares.LoggingMiddleware)
+	router.Use(middlewares.SecurityHeaders)
+	router.Use(middleware.Recover())
+	router.Use(middleware.CORS())
+	router.Use(middlewares.CORS())
+	router.Use(middlewares.HealthCheck(db))
+	server.RegisterRoutes(router, handlers)
+	server.NewServer(router, appCfg.Port, time.Duration(1)).StartListening()
 }

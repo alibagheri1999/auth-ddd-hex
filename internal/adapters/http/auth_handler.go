@@ -4,7 +4,7 @@ import (
 	"DDD-HEX/internal/application/services/auth"
 	"DDD-HEX/internal/application/utils"
 	"DDD-HEX/internal/domain/DTO"
-	"encoding/json"
+	"github.com/labstack/echo/v4"
 	"net/http"
 	"time"
 )
@@ -13,71 +13,136 @@ type AuthHandler struct {
 	AuthService auth.AuthService
 }
 
-func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
+func (h *AuthHandler) Login(c echo.Context) error {
 	config := utils.ConfigSetup()
 	appCfg := config.App
 	refreshTokenExp := appCfg.RefreshTokenExp
 	accessTokenExp := appCfg.AccessTokenExp
 	var req DTO.LoginRequest
+	var res DTO.LoginResponse
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+	if err := c.Bind(&req); err != nil {
+		res.Message = err.Error()
+		return echo.NewHTTPError(http.StatusBadRequest, res)
 	}
 
-	accessToken, refreshToken, err := h.AuthService.Authenticate(req.Email, req.Password)
+	accessToken, refreshToken, err := h.AuthService.Authenticate(c, req.Email, req.Password)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
+		res.Message = err.Error()
+		return echo.NewHTTPError(http.StatusUnauthorized, res)
 	}
 
-	http.SetCookie(w, &http.Cookie{
+	c.SetCookie(&http.Cookie{
 		Name:     "access_token",
 		Value:    accessToken,
 		Expires:  time.Now().Add(time.Duration(accessTokenExp) * time.Minute),
 		HttpOnly: true,
 	})
 
-	http.SetCookie(w, &http.Cookie{
+	c.SetCookie(&http.Cookie{
 		Name:     "refresh_token",
 		Value:    refreshToken,
 		Expires:  time.Now().Add(time.Duration(refreshTokenExp) * time.Hour),
 		HttpOnly: true,
 	})
 
-	w.WriteHeader(http.StatusOK)
+	res.Message = "login"
+	return c.JSON(http.StatusOK, res)
 }
 
-func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
+func (h *AuthHandler) Refresh(c echo.Context) error {
+	var res DTO.LoginResponse
 	config := utils.ConfigSetup()
 	appCfg := config.App
 	refreshTokenExp := appCfg.RefreshTokenExp
 	accessTokenExp := appCfg.AccessTokenExp
-	refreshTokenCookie, err := r.Cookie("refresh_token")
+	refreshTokenCookie, err := c.Cookie("refresh_token")
 	if err != nil {
-		http.Error(w, "Refresh token missing", http.StatusUnauthorized)
-		return
+		res.Message = err.Error()
+		return echo.NewHTTPError(http.StatusUnauthorized, res)
 	}
 
-	accessToken, refreshToken, err := h.AuthService.RefreshToken(refreshTokenCookie.Value)
+	accessToken, refreshToken, err := h.AuthService.RefreshToken(c, refreshTokenCookie.Value)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
+		res.Message = err.Error()
+		return echo.NewHTTPError(http.StatusUnauthorized, res)
 	}
 
-	http.SetCookie(w, &http.Cookie{
+	c.SetCookie(&http.Cookie{
 		Name:     "access_token",
 		Value:    accessToken,
 		Expires:  time.Now().Add(time.Duration(accessTokenExp) * time.Minute),
 		HttpOnly: true,
 	})
 
-	http.SetCookie(w, &http.Cookie{
+	c.SetCookie(&http.Cookie{
 		Name:     "refresh_token",
 		Value:    refreshToken,
 		Expires:  time.Now().Add(time.Duration(refreshTokenExp) * time.Hour),
 		HttpOnly: true,
 	})
 
-	w.WriteHeader(http.StatusOK)
+	res.Message = "refreshed"
+	return c.JSON(http.StatusOK, res)
+}
+
+func (h *AuthHandler) Generate2FACode(c echo.Context) error {
+	var req DTO.GenerateCodeRequest
+	var res DTO.GenerateCodeResponse
+	if err := c.Bind(&req); err != nil {
+		res.Message = err.Error()
+		res.Code = ""
+		return echo.NewHTTPError(http.StatusBadRequest, res)
+	}
+
+	code, err := h.AuthService.Generate2FACode(c, req.Email)
+	if err != nil {
+		res.Message = err.Error()
+		return echo.NewHTTPError(http.StatusUnauthorized, res)
+	}
+
+	res.Message = "generated"
+	res.Code = code
+	return c.JSON(http.StatusOK, res)
+}
+
+func (h *AuthHandler) Validate2FACode(c echo.Context) error {
+	var req DTO.ValidateCodeRequest
+	var res DTO.ValidateCodeResponse
+	if err := c.Bind(&req); err != nil {
+		res.Message = err.Error()
+		return echo.NewHTTPError(http.StatusBadRequest, res)
+	}
+	config := utils.ConfigSetup()
+	appCfg := config.App
+	refreshTokenExp := appCfg.RefreshTokenExp
+	accessTokenExp := appCfg.AccessTokenExp
+
+	err := h.AuthService.Validate2FACode(c, req.Email, req.Code)
+	if err != nil {
+		res.Message = err.Error()
+		return echo.NewHTTPError(http.StatusUnauthorized, res)
+	}
+	accessToken, refreshToken, err := h.AuthService.GenerateTokens(c, req.Email)
+	if err != nil {
+		res.Message = err.Error()
+		return echo.NewHTTPError(http.StatusUnauthorized, res)
+	}
+
+	c.SetCookie(&http.Cookie{
+		Name:     "access_token",
+		Value:    accessToken,
+		Expires:  time.Now().Add(time.Duration(accessTokenExp) * time.Minute),
+		HttpOnly: true,
+	})
+
+	c.SetCookie(&http.Cookie{
+		Name:     "refresh_token",
+		Value:    refreshToken,
+		Expires:  time.Now().Add(time.Duration(refreshTokenExp) * time.Hour),
+		HttpOnly: true,
+	})
+
+	res.Message = "login"
+	return c.JSON(http.StatusOK, res)
 }

@@ -1,16 +1,21 @@
 app:
-HOST_IP: 127.0.0.1
-ENV: debugging
-APP_PORT: 8080
-APPLY_MIGRATION: true
-ACCESS_TOKEN_EXP: 15
-REFRESH_TOKEN_EXP: 168
-JWT_SECRET: SAMPLE
-DB_TYPE: postgres
+  HOST_IP: 127.0.0.1
+  ENV: production
+  APP_PORT: 8080
+  ACCESS_TOKEN_EXP: 15
+  REFRESH_TOKEN_EXP: 168
+  JWT_SECRET: SAMPLE
+  DB_TYPE: postgres
 
 postgres:
-DB_HOST: 127.0.0.1
-DB_USER: alibagheri
-DB_PASSWORD: Abcd1234
-DB_NAME: mysql
-DB_PORT: 3306
+  DB_HOST: 127.0.0.1
+  DB_USER: postgres
+  DB_PASSWORD: postgres
+  DB_NAME: postgres
+  DB_PORT: 5555
+  SSL_MODE: disable
+
+redis:
+  CACHE_HOST: localhost:6379
+  CACHE_PASSWORD: redis
+  CACHE_DB: 0

@@ -3,10 +3,12 @@ package postgres
 import (
 	"DDD-HEX/internal/domain"
 	"database/sql"
+	"sync"
 )
 
 type UserRepository struct {
 	DB *sql.DB
+	mu sync.Mutex
 }
 
 func (r *UserRepository) Save(user domain.User) error {
