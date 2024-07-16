@@ -26,9 +26,9 @@ func NewRepositories(appConfig config.AppConfig, config config.PostgresConfig) (
 	db.SetMaxIdleConns(2)
 
 	if pingErr := db.Ping(); pingErr != nil {
-		log.Println("Err posgtres ping", pingErr)
+		log.Println("Err postgres ping", pingErr)
 	} else {
-		log.Println("Success posgtres connection is ok")
+		log.Println("Success postgres connection is ok")
 	}
 
 	return &Repositories{
