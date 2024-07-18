@@ -9,24 +9,68 @@
         <runningAs username="postgres"/>
     </preConditions>
 
+    <changeSet id="create_rule_enum" author="Ali">
+        <sql>
+            CREATE TYPE user_role AS ENUM ('admin', 'user');
+        </sql>
+    </changeSet>
     <changeSet author="Ali" id="create_table_users">
         <createTable tableName="users">
             <column name="id" type="bigint" autoIncrement="true">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
-            <column name="first_name" type="varchar(250)"/>
-            <column name="last_name" type="varchar(250)"/>
-            <column name="email" type="varchar(250)"/>
-            <column name="2FA_activated" type="varchar(4)"/>
+            <column name="name" type="varchar(250)"/>
+            <column name="email" type="varchar(250)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="password" type="varchar(250)"/>
+            <column name="two_fa_activated" type="boolean"/>
             <column name="phone_number" type="varchar(20)">
                 <constraints nullable="false"/>
             </column>
-            <column name="type" type="varchar(250)"/>
-            <column name="status" type="varchar(250)"/>
-            <column name="has_store" type="boolean" defaultValue="false"/>
+            <column name="rule" type="user_role">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="varchar(250)">
+                <constraints nullable="false"/>
+            </column>
             <column name="date_created" type="timestamptz">
                 <constraints nullable="false"/>
             </column>
         </createTable>
+    </changeSet>
+    <changeSet id="add_unique_for_email" author="Ali">
+        <addUniqueConstraint
+                columnNames="email"
+                constraintName="uc_users_email"
+                tableName="users"/>
+    </changeSet>
+    <changeSet author="Ali" id="create_table_auth">
+        <createTable tableName="auth">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="access_token" type="varchar(250)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="refresh_token" type="varchar(250)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expires" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="Ali" id="foreignKeyConstraint_auth_user_id">
+        <addForeignKeyConstraint constraintName="fk_user_user_id"
+                                 baseTableName="auth"
+                                 baseColumnNames="user_id"
+                                 onDelete="CASCADE"
+                                 onUpdate="RESTRICT"
+                                 referencedTableName="users"
+                                 referencedColumnNames="id"/>
     </changeSet>
 </databaseChangeLog>

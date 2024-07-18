@@ -2,11 +2,10 @@ package postgres
 
 import (
 	"DDD-HEX/config"
-	utils "DDD-HEX/internal/application/utils"
+	"DDD-HEX/internal/application/utils"
 	"database/sql"
-	"fmt"
 	_ "github.com/lib/pq"
-	"log"
+	"github.com/sirupsen/logrus"
 	"sync"
 )
 
@@ -20,15 +19,15 @@ func NewRepositories(appConfig config.AppConfig, config config.PostgresConfig) (
 	dsn := utils.GeneratePostgresConnectionString(config)
 	db, err := sql.Open(appConfig.DbType, dsn)
 	if err != nil {
-		fmt.Println("db connection failed", err)
+		logrus.Info("db connection failed", err)
 	}
 	db.SetMaxOpenConns(0)
 	db.SetMaxIdleConns(2)
 
 	if pingErr := db.Ping(); pingErr != nil {
-		log.Println("Err postgres ping", pingErr)
+		logrus.Info("Err postgres ping", pingErr)
 	} else {
-		log.Println("Success postgres connection is ok")
+		logrus.Info("Success postgres connection is ok")
 	}
 
 	return &Repositories{

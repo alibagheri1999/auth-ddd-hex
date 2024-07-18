@@ -1,6 +1,8 @@
 package utils
 
-import "time"
+import (
+	"time"
+)
 
 func CalculateTimeDifference(storedTime time.Time) time.Duration {
 	now := time.Now()
@@ -8,5 +10,5 @@ func CalculateTimeDifference(storedTime time.Time) time.Duration {
 }
 
 func IsWithinTenMinutes(duration time.Duration) bool {
-	return duration.Minutes() <= 10
+	return duration.Minutes() >= 10
 }

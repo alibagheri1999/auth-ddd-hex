@@ -2,9 +2,10 @@ package auth
 
 import (
 	"DDD-HEX/internal/application/utils"
-	"DDD-HEX/internal/ports/repository"
+	"DDD-HEX/internal/ports/cache"
 	"errors"
 	"fmt"
+	"github.com/dgrijalva/jwt-go"
 	"math/rand"
 	"time"
 )
@@ -12,6 +13,17 @@ import (
 const (
 	charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
 )
+
+var (
+	Secret = []byte(utils.ConfigSetup().App.JwtSecret)
+)
+
+type Claims struct {
+	Email  string `json:"eamil"`
+	Role   string `json:"role"`
+	UserID string `json:"user_id"`
+	jwt.StandardClaims
+}
 
 func GenerateRandomCode(length int) string {
 	seededRand := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -22,17 +34,11 @@ func GenerateRandomCode(length int) string {
 	return string(code)
 }
 
-func HandleFailLogin(email string, cacheRepo repository.CacheRepository) (int, error) {
-	failedCount, err := cacheRepo.GetFailedCount(email)
-	if err != nil {
-		return 0, err
-	}
-	lastFailed, err := cacheRepo.GetLastFailed(email)
-	if err != nil {
-		return 0, err
-	}
+func HandleFailLogin(email string, cacheRepo cache.CacheRepository) (int, error) {
+	failedCount := cacheRepo.GetFailedCount(email)
+	lastFailed := cacheRepo.GetLastFailed(email)
 	duration := utils.CalculateTimeDifference(lastFailed)
-	text := fmt.Sprintf("please try again after %f mins, you rached 3 fail tries", duration.Minutes())
+	text := fmt.Sprintf("please try again after %v mins, you rached 3 fail tries", duration.Minutes())
 	if failedCount == 3 {
 		if sErr := cacheRepo.SetFailedCount(email, 0); sErr != nil {
 			return 0, sErr

@@ -1,8 +1,8 @@
 package config
 
 import (
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,7 +17,7 @@ const (
 
 var cfg *Config
 
-// Init set the first and necessary settings
+// InitAppConfig set the first and necessary settings
 func InitAppConfig() {
 	cfg = new(Config)
 	v := viper.New()
@@ -25,28 +25,30 @@ func InitAppConfig() {
 	v.SetConfigName("config")
 	currentDir, err := os.Getwd()
 	if err != nil {
-		log.Fatal("Error getting current directory:", err)
+		logrus.WithError(err).Error("Error getting current directory:", err)
 	}
 	rootDir := findRootDirectory(currentDir, "go.mod")
 	if rootDir == "" {
-		log.Fatal("Root directory not found.")
+		logrus.Error("Root directory not found.")
 	}
 	// Set the configuration path to the project root directory
 	v.AddConfigPath(filepath.Join(rootDir, "config"))
 	if err1 := v.ReadInConfig(); err != nil {
-		log.Fatal("error loading default configs: ", err1)
+		logrus.WithError(err1).Error("error loading default configs: ", err1)
 	}
 
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
 	v.AutomaticEnv()
 	if err := v.MergeInConfig(); err != nil {
-		log.Println("no config file found. Using defaults and environment variables.")
+		logrus.Info("no config file found. Using defaults and environment variables.")
 	}
 	if err := v.UnmarshalExact(&cfg); err != nil {
-		log.Fatalf("invalid config schema: %v", err)
+		logrus.WithError(err).Error("invalid config schema: ", err)
+
 	}
 }
 
+// Init set the first and necessary settings
 func Init(configType string) {
 	cfg = new(Config)
 	v := viper.New()
@@ -58,25 +60,25 @@ func Init(configType string) {
 	}
 	currentDir, err := os.Getwd()
 	if err != nil {
-		log.Fatal("Error getting current directory:", err)
+		logrus.WithError(err).Error("Error getting current directory:", err)
 	}
 	rootDir := findRootDirectory(currentDir, "go.mod")
 	if rootDir == "" {
-		log.Fatal("Root directory not found.")
+		logrus.Error("Root directory not found.")
 	}
 	// Set the configuration path to the project root directory
 	v.AddConfigPath(filepath.Join(rootDir, "config"))
 	if err1 := v.ReadInConfig(); err != nil {
-		log.Fatal("error loading default configs: ", err1)
+		logrus.WithError(err1).Error("error loading default configs: ", err1)
 	}
 
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
 	v.AutomaticEnv()
 	if err := v.MergeInConfig(); err != nil {
-		log.Println("no config file found. Using defaults and environment variables.")
+		logrus.Info("no config file found. Using defaults and environment variables.")
 	}
 	if err := v.UnmarshalExact(&cfg); err != nil {
-		log.Fatalf("invalid config schema: %v", err)
+		logrus.WithError(err).Error("invalid config schema: ", err)
 	}
 }
 
@@ -95,7 +97,7 @@ func (c *Config) IsProduction() bool {
 	return c.App.Env == ProductionMode
 }
 
-// IsDebugging change to debugging mode
+// IsDeveloping change to debugging mode
 func (c *Config) IsDeveloping() bool {
 	return c.App.Env == DevelopingMode
 }

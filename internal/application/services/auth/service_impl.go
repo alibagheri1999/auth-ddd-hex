@@ -5,6 +5,7 @@ import (
 	"DDD-HEX/internal/application/services/user"
 	"DDD-HEX/internal/application/utils"
 	"DDD-HEX/internal/domain"
+	"DDD-HEX/internal/ports/cache"
 	"DDD-HEX/internal/ports/repository"
 	"errors"
 	"github.com/dgrijalva/jwt-go"
@@ -15,11 +16,11 @@ import (
 type authServiceImpl struct {
 	authRepository repository.AuthRepository
 	userService    user.UserService
-	cacheRepo      repository.CacheRepository
+	cacheRepo      cache.CacheRepository
 	appConfig      config.AppConfig
 }
 
-func NewAuthService(authRepo repository.AuthRepository, userService user.UserService, cacheRepo repository.CacheRepository, appConfig config.AppConfig) AuthService {
+func NewAuthService(authRepo repository.AuthRepository, userService user.UserService, cacheRepo cache.CacheRepository, appConfig config.AppConfig) AuthService {
 	return &authServiceImpl{authRepository: authRepo, userService: userService, appConfig: appConfig, cacheRepo: cacheRepo}
 }
 
@@ -30,20 +31,27 @@ func (s *authServiceImpl) Authenticate(c echo.Context, email, password string) (
 	}
 	accessTokenExp := s.appConfig.AccessTokenExp
 	user, err := s.userService.FindUserByEmail(c, email)
-	if err != nil || !utils.CheckHash(password, user.Password) { // Assume this function checks the password hash
+	validPass := utils.CheckHash(password, user.Password.String)
+	if err != nil || !validPass {
 		failedCount += 1
 		if sErr := s.cacheRepo.SetFailedCount(email, failedCount); sErr != nil {
 			return "", "", sErr
 		}
+		if err == nil && !validPass {
+			err = errors.New("wrong username or password")
+		}
 		return "", "", err
 	}
+	if user.Status == "deactivated" {
+		return "", "", errors.New("user is deactivated")
+	}
 
-	accessToken, refreshToken, err := s.generateTokens(c, user.ID)
+	accessToken, refreshToken, err := s.generateTokens(c, user)
 	if err != nil {
 		return "", "", err
 	}
 
-	auth := domain.Auth{
+	auth := domain.AuthEntity{
 		UserID:       user.ID,
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
@@ -62,8 +70,15 @@ func (s *authServiceImpl) RefreshToken(c echo.Context, refreshToken string) (str
 	if err != nil {
 		return "", "", err
 	}
-
-	accessToken, newRefreshToken, err := s.generateTokens(c, auth.UserID)
+	if auth.Status == "deactivated" {
+		return "", "", errors.New("user is deactivated")
+	}
+	user := &domain.UserEntity{
+		Rule:  auth.Rule,
+		Email: auth.Email,
+		ID:    auth.UserID,
+	}
+	accessToken, newRefreshToken, err := s.generateTokens(c, user)
 	if err != nil {
 		return "", "", err
 	}
@@ -71,19 +86,26 @@ func (s *authServiceImpl) RefreshToken(c echo.Context, refreshToken string) (str
 	auth.AccessToken = accessToken
 	auth.RefreshToken = newRefreshToken
 	auth.Expires = time.Now().Add(15 * time.Minute).Unix()
-
-	if err := s.authRepository.Save(auth); err != nil {
+	newAuth := domain.AuthEntity{
+		UserID:       auth.UserID,
+		Expires:      auth.Expires,
+		AccessToken:  auth.AccessToken,
+		RefreshToken: auth.RefreshToken,
+	}
+	if err := s.authRepository.Save(newAuth); err != nil {
 		return "", "", err
 	}
 
 	return accessToken, newRefreshToken, nil
 }
 
-func (s *authServiceImpl) generateTokens(c echo.Context, userID string) (string, string, error) {
+func (s *authServiceImpl) generateTokens(c echo.Context, user *domain.UserEntity) (string, string, error) {
 	refreshTokenExp := s.appConfig.RefreshTokenExp
 	accessTokenExp := s.appConfig.AccessTokenExp
 	accessTokenClaims := jwt.MapClaims{
-		"user_id": userID,
+		"user_id": user.ID,
+		"email":   user.Email,
+		"role":    user.Rule,
 		"exp":     time.Now().Add(time.Duration(accessTokenExp) * time.Minute).Unix(), // 15 minutes
 	}
 
@@ -94,7 +116,9 @@ func (s *authServiceImpl) generateTokens(c echo.Context, userID string) (string,
 	}
 
 	refreshTokenClaims := jwt.MapClaims{
-		"user_id": userID,
+		"user_id": user.ID,
+		"email":   user.Email,
+		"role":    user.Rule,
 		"exp":     time.Now().Add(time.Duration(refreshTokenExp) * time.Hour).Unix(), // 7 weeks
 	}
 
@@ -109,6 +133,12 @@ func (s *authServiceImpl) generateTokens(c echo.Context, userID string) (string,
 
 func (s *authServiceImpl) GenerateTokens(c echo.Context, email string) (string, string, error) {
 	user, err := s.userService.FindUserByEmail(c, email)
+	if err != nil {
+		return "", "", err
+	}
+	if user.Status == "deactivated" {
+		return "", "", errors.New("user is deactivated")
+	}
 	refreshTokenExp := s.appConfig.RefreshTokenExp
 	accessTokenExp := s.appConfig.AccessTokenExp
 	accessTokenClaims := jwt.MapClaims{
@@ -151,4 +181,20 @@ func (s *authServiceImpl) Validate2FACode(c echo.Context, username, code string)
 		return errors.New("invalid 2FA code")
 	}
 	return nil
+}
+
+func ValidateToken(tokenString string) (*Claims, error) {
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		return Secret, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if !token.Valid {
+		return nil, jwt.ErrSignatureInvalid
+	}
+
+	return claims, nil
 }

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/labstack/echo/v4"
-	"log"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"os"
 	"time"
@@ -27,23 +27,23 @@ type Server struct {
 
 // StartListening force server to start listening on a port
 func (s *Server) StartListening() {
-
+	logrus.Info(fmt.Sprintf("server start to listen on %s\n", s.addr))
 	go func() {
 		if err := s.router.Start(s.addr); err != nil && err != http.ErrServerClosed {
-			log.Println("Err server start", err)
+			logrus.Error("Err server start", err)
 		}
 	}()
 
 	quit := make(chan os.Signal, 1)
 	<-quit
 
-	log.Printf("server shutting down in %s...\n", s.gracefulShutdown)
+	logrus.Info(fmt.Sprintf("server shutting down in %s...\n", s.gracefulShutdown))
 	c, cancel := context.WithTimeout(context.Background(), s.gracefulShutdown)
 	defer cancel()
 	if err := s.router.Shutdown(c); err != nil {
-		log.Println("Err server shutdown", err)
+		logrus.Info("Err server shutdown", err)
 	}
 
 	<-c.Done()
-	log.Println("Good Luck!")
+	logrus.Info("Good Luck!")
 }

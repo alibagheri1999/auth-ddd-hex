@@ -19,7 +19,7 @@ services:
       - ${REDIS_PORT}:6379
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
-    command: [ "redis-server", "--requirepass", "mysecretpassword" ]
+    command: [ "redis-server", "--requirepass", "${REDIS_PASSWORD}" ]
     volumes:
       - ${REDIS_DB_DATA}:/data
 

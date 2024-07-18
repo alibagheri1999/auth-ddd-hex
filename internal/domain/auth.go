@@ -1,8 +1,19 @@
 package domain
 
-type Auth struct {
-	UserID       string `"json:"user_id""`
-	AccessToken  string `"json:"access_token""`
-	RefreshToken string `"json:"refresh_token""`
-	Expires      int64  `"json:"expires""`
+type AuthEntity struct {
+	ID           int    `"db:"id""`
+	UserID       int    `"db:"user_id""`
+	AccessToken  string `"db:"access_token""`
+	RefreshToken string `"db:"refresh_token""`
+	Expires      int64  `"db:"expires""`
+}
+
+type UserAuthEntity struct {
+	UserID       int      `"db:"user_id""`
+	AccessToken  string   `"db:"access_token""`
+	RefreshToken string   `"db:"refresh_token""`
+	Expires      int64    `"db:"expires""`
+	Email        string   `"db:"email""`
+	Rule         UserRole `"db:"rule""`
+	Status       string   `"db:"status""`
 }

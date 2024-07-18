@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DB_CHANGELOG_PATH="migrations/liquibase/migrations.xml"
+DB_CHANGELOG_PATH="../migrations/liquibase/migrations.xml"
 
 run() {
   echo "Run application"

@@ -14,11 +14,13 @@ import (
 )
 
 func main() {
+	utils.LoggerSetup()
 	config := utils.ConfigSetup()
 	appCfg := config.App
 	dbCfg := config.Postgres
 	cacheCfg := config.Redis
-	cache := redis.NewRedisClient(cacheCfg)
+	cache := redis.NewRedisClientWrapper(cacheCfg)
+	go cache.EnsureConnected(3)
 	db, err := postgres.NewRepositories(appCfg, dbCfg)
 	if err != nil {
 		log.Fatal("Failed to connect to the database:", err)
@@ -33,6 +35,7 @@ func main() {
 	router.Use(middleware.CORS())
 	router.Use(middlewares.CORS())
 	router.Use(middlewares.HealthCheck(db))
+	//router.Use(middleware.Logger())
 	server.RegisterRoutes(router, handlers)
 	server.NewServer(router, appCfg.Port, time.Duration(1)).StartListening()
 }

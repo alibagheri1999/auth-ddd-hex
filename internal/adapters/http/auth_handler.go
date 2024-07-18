@@ -13,6 +13,17 @@ type AuthHandler struct {
 	AuthService auth.AuthService
 }
 
+var emptyAccessTokenCookies = &http.Cookie{
+	Name:     "access_token",
+	Value:    "",
+	HttpOnly: true,
+}
+var emptyRefreshTokenCookies = &http.Cookie{
+	Name:     "refresh_token",
+	Value:    "",
+	HttpOnly: true,
+}
+
 func (h *AuthHandler) Login(c echo.Context) error {
 	config := utils.ConfigSetup()
 	appCfg := config.App
@@ -25,13 +36,13 @@ func (h *AuthHandler) Login(c echo.Context) error {
 		res.Message = err.Error()
 		return echo.NewHTTPError(http.StatusBadRequest, res)
 	}
-
 	accessToken, refreshToken, err := h.AuthService.Authenticate(c, req.Email, req.Password)
 	if err != nil {
+		c.SetCookie(emptyAccessTokenCookies)
+		c.SetCookie(emptyRefreshTokenCookies)
 		res.Message = err.Error()
 		return echo.NewHTTPError(http.StatusUnauthorized, res)
 	}
-
 	c.SetCookie(&http.Cookie{
 		Name:     "access_token",
 		Value:    accessToken,
@@ -64,6 +75,8 @@ func (h *AuthHandler) Refresh(c echo.Context) error {
 
 	accessToken, refreshToken, err := h.AuthService.RefreshToken(c, refreshTokenCookie.Value)
 	if err != nil {
+		c.SetCookie(emptyAccessTokenCookies)
+		c.SetCookie(emptyRefreshTokenCookies)
 		res.Message = err.Error()
 		return echo.NewHTTPError(http.StatusUnauthorized, res)
 	}
@@ -125,6 +138,8 @@ func (h *AuthHandler) Validate2FACode(c echo.Context) error {
 	}
 	accessToken, refreshToken, err := h.AuthService.GenerateTokens(c, req.Email)
 	if err != nil {
+		c.SetCookie(emptyAccessTokenCookies)
+		c.SetCookie(emptyRefreshTokenCookies)
 		res.Message = err.Error()
 		return echo.NewHTTPError(http.StatusUnauthorized, res)
 	}

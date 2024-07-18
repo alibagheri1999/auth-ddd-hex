@@ -1,11 +1,12 @@
 package DTO
 
-type UserRequest struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+type CreateUserRequest struct {
+	Name        string `json:"name"`
+	Email       string `json:"email"`
+	Password    string `json:"password"`
+	PhoneNumber string `json:"phone_number"`
 }
 
-type UserResponse struct {
+type CreateUserResponse struct {
 	Message string `json:"message"`
 }
