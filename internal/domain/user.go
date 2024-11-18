@@ -9,15 +9,15 @@ import (
 )
 
 type UserEntity struct {
-	ID             int            `"db:"id""`
-	Name           string         `"db:"name""`
-	Email          string         `"db:"email""`
-	Password       sql.NullString `"db:"password""`
-	Rule           UserRole       `"db:"rule""`
-	PhoneNumber    sql.NullString `"db:"phone_number""`
-	TowFAActivated bool           `"db:"two_fa_activated""`
-	Status         string         `"db:"status""`
-	DateCreated    time.Time      `"db:"date_created""`
+	ID             int            `db:"id"`
+	Name           string         `db:"name"`
+	Email          string         `db:"email"`
+	Password       sql.NullString `db:"password"`
+	Rule           UserRole       `db:"rule"`
+	PhoneNumber    sql.NullString `db:"phone_number"`
+	TowFAActivated bool           `db:"two_fa_activated"`
+	Status         string         `db:"status"`
+	DateCreated    time.Time      `db:"date_created"`
 }
 
 type UserRole int

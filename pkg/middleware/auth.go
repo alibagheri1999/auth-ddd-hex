@@ -10,16 +10,13 @@ import (
 func AuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		var res DTO.LoginResponse
-		token, err := c.Request().Cookie("access_token")
-		if err != nil {
-			res.Message = "Forbidden"
-			return c.JSON(http.StatusUnauthorized, res)
-		}
-		if token.Value == "" {
+		headers := c.Request().Header
+		token := headers.Get("access_token")
+		if token == "" {
 			res.Message = "Forbidden"
 			return c.JSON(http.StatusForbidden, res)
 		}
-		claims, err := auth.ValidateToken(token.Value)
+		claims, err := auth.ValidateToken(token)
 		if err != nil {
 			res.Message = "Unauthorized"
 			return c.JSON(http.StatusUnauthorized, res)
