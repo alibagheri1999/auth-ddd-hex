@@ -16,13 +16,10 @@ func RegisterRoutes(router *echo.Echo, handler *setup.Handlers) {
 	auth.POST("/refresh", handler.AuthHandler.Refresh)
 	auth.POST("/generate-2FA-code", handler.AuthHandler.Generate2FACode)
 	auth.POST("/validate-2FA-code", handler.AuthHandler.Validate2FACode)
-
+	auth.POST("/users", handler.UserHandler.CreateUser)
 	protected := v1.Group("/core")
 	protected.Use(middleware.AuthMiddleware)
 
 	admin := protected.Group("/admin")
 	admin.Use(middleware.RBACMiddleware("admin"))
-
-	admin.POST("/users", handler.UserHandler.CreateUser)
-
 }
