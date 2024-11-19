@@ -1,7 +1,9 @@
 package server
 
 import (
+	middlewares "DDD-HEX/pkg/middleware"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"net/http"
 )
 
@@ -20,5 +22,11 @@ func NewRouter() *echo.Echo {
 		return c.JSON(http.StatusMethodNotAllowed, echo.Map{"message": "method not allowed"})
 	}
 
+	router.Use(middlewares.LoggingMiddleware)
+	router.Use(middlewares.SecurityHeaders)
+	router.Use(middleware.Recover())
+	router.Use(middleware.CORS())
+	router.Use(middlewares.CORS())
+	//router.Use(middleware.Logger())
 	return router
 }

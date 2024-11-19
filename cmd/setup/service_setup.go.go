@@ -4,13 +4,19 @@ import (
 	"DDD-HEX/config"
 	"DDD-HEX/internal/application/services/auth"
 	"DDD-HEX/internal/application/services/user"
-	"DDD-HEX/internal/ports/cache"
-	"DDD-HEX/internal/ports/repository"
 )
 
-func SetupServices(userRepo repository.UserRepository, authRepo repository.AuthRepository, cacheRepo cache.CacheRepository, appConfig config.AppConfig) (user.UserService, auth.AuthService) {
-	userService := user.NewUserService(userRepo)
-	authService := auth.NewAuthService(authRepo, userService, cacheRepo, appConfig)
+type Services struct {
+	UserService *user.UserService
+	AuthService *auth.AuthService
+}
 
-	return userService, authService
+func SetupServices(repositories *Repositories, appConfig config.AppConfig) *Services {
+	userService := user.NewUserService(repositories.UserRepository)
+	authService := auth.NewAuthService(repositories.AuthRepository, userService, repositories.CacheRepository, appConfig)
+
+	return &Services{
+		UserService: &userService,
+		AuthService: &authService,
+	}
 }

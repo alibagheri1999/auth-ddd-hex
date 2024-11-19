@@ -1,37 +1,42 @@
 package db
 
 import (
-	"DDD-HEX/config"
 	"DDD-HEX/internal/adapters/db/postgres"
+	"DDD-HEX/internal/application/utils"
 	"DDD-HEX/internal/ports/clients"
+	"DDD-HEX/internal/ports/repository"
 	"errors"
 	"fmt"
 )
 
-type PostgresRepository struct {
+type DbRepository struct {
 	DB clients.Database
 }
 
 type Repository interface {
-	NewAuthRepository(database clients.Database) *postgres.AuthRepository
-	NewUserRepository(database clients.Database) *postgres.UserRepository
+	NewAuthRepository(database clients.Database) repository.AuthRepository
+	NewUserRepository(database clients.Database) repository.UserRepository
 }
 
 // NewUserRepository creates a new UserRepository.
-func (p *PostgresRepository) NewUserRepository(database clients.Database) *postgres.UserRepository {
+func (p *DbRepository) NewUserRepository(database clients.Database) repository.UserRepository {
 	return &postgres.UserRepository{DB: database}
 }
 
 // NewAuthRepository creates a new AuthRepository.
-func (p *PostgresRepository) NewAuthRepository(database clients.Database) *postgres.AuthRepository {
+func (p *DbRepository) NewAuthRepository(database clients.Database) repository.AuthRepository {
 	return &postgres.AuthRepository{DB: database}
 }
 
-func NewRepository(appConfig config.AppConfig, database clients.Database) (Repository, error) {
-	switch appConfig.DbType {
-	case "postgres":
-		return &PostgresRepository{DB: database}, nil
+func NewRepository(dbType string, database clients.Database) (Repository, error) {
+	dbEnum, err := utils.ParseDbEnum(dbType)
+	if err != nil {
+		return nil, fmt.Errorf("unsupported db type: %s", dbType)
+	}
+	switch dbEnum {
+	case utils.Postgres:
+		return &DbRepository{DB: database}, nil
 	default:
-		return nil, errors.New(fmt.Sprintf("unsupported database type: %s", appConfig.DbType))
+		return nil, errors.New(fmt.Sprintf("unsupported database type: %s", dbType))
 	}
 }

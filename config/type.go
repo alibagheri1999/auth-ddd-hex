@@ -14,6 +14,7 @@ type AppConfig struct {
 	RefreshTokenExp int    `mapstructure:"REFRESH_TOKEN_EXP" validate:"required"`
 	JwtSecret       string `mapstructure:"JWT_SECRET" validate:"required"`
 	DbType          string `mapstructure:"DB_TYPE" validate:"required"`
+	CacheType       string `mapstructure:"CACHE_TYPE" validate:"required"`
 }
 
 type DatabaseConfig struct {

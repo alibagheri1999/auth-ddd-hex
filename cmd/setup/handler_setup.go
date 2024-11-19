@@ -2,8 +2,6 @@ package setup
 
 import (
 	Handler "DDD-HEX/internal/adapters/http"
-	"DDD-HEX/internal/application/services/auth"
-	"DDD-HEX/internal/application/services/user"
 )
 
 type Handlers struct {
@@ -11,9 +9,9 @@ type Handlers struct {
 	AuthHandler *Handler.AuthHandler
 }
 
-func NewHandler(userService user.UserService, authService auth.AuthService) *Handlers {
-	userHandler := &Handler.UserHandler{UserService: userService}
-	authHandler := &Handler.AuthHandler{AuthService: authService}
+func NewHandler(services *Services) *Handlers {
+	userHandler := &Handler.UserHandler{UserService: *services.UserService}
+	authHandler := &Handler.AuthHandler{AuthService: *services.AuthService}
 	return &Handlers{
 		UserHandler: userHandler,
 		AuthHandler: authHandler,

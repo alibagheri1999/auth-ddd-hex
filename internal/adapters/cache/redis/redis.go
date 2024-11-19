@@ -2,61 +2,40 @@ package redis
 
 import (
 	"DDD-HEX/config"
+	"DDD-HEX/internal/ports/clients"
 	"context"
 	"github.com/go-redis/redis/v8"
 	"github.com/sirupsen/logrus"
-	"os"
 	"time"
 )
 
-var ctx = context.Background()
-
-type ClientWrapper struct {
+type RedisCache struct {
 	Client *redis.Client
+	Config config.CacheConfig
 }
 
-func NewRedisClientWrapper(config config.CacheConfig) *ClientWrapper {
-	client, err := NewRedisClient(config)
-	if err != nil {
-		logrus.Error("Failed to connect to Redis with err ", err.Error())
-		os.Exit(1)
-	}
-	return &ClientWrapper{
-		Client: client,
-	}
-}
-
-func NewRedisClient(config config.CacheConfig) (*redis.Client, error) {
+func NewRedisCache(config config.CacheConfig) clients.Cache {
 	client := redis.NewClient(&redis.Options{
 		Addr:     config.Host,
 		Password: config.Password,
 		DB:       config.DB,
 	})
+
+	// Test connection
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, err := client.Ping(ctx).Result()
-	if err != nil {
-		logrus.Warn("Failed to connect to Redis:", err)
-		return nil, err
+	if _, err := client.Ping(ctx).Result(); err != nil {
+		logrus.Fatalf("Failed to connect to Redis: %v", err)
 	}
-	logrus.Info("Successfully connected to Redis")
-	return client, nil
-}
 
-func (w *ClientWrapper) EnsureConnected(maxRetries int) {
-	ctx := context.Background()
-	_, err := w.Client.Ping(ctx).Result()
-	if err != nil {
-		logrus.Warn("Lost connection to Redis, attempting to reconnect...")
-		if !RetryRedisConnection(w.Client, maxRetries) {
-			logrus.Warn("Could not reconnect to Redis after max retries, exiting...")
-			return
-		}
+	return &RedisCache{
+		Client: client,
+		Config: config,
 	}
 }
 
-func RetryRedisConnection(client *redis.Client, maxRetries int) bool {
+func (r *RedisCache) EnsureConnected(maxRetries int) error {
 	var attempt int
 	var err error
 
@@ -64,15 +43,49 @@ func RetryRedisConnection(client *redis.Client, maxRetries int) bool {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		_, err = client.Ping(ctx).Result()
+		_, err = r.Client.Ping(ctx).Result()
 		if err == nil {
 			logrus.Info("Successfully reconnected to Redis")
-			return true
+			return nil
 		}
 
 		time.Sleep(time.Duration(attempt+1) * time.Second)
 	}
 
 	logrus.Warn("Failed to reconnect to Redis after", maxRetries, "attempts:", err)
-	return false
+	return err
+}
+
+func (r *RedisCache) Connect() error {
+	_, err := r.Client.Ping(context.Background()).Result()
+	return err
+}
+
+func (r *RedisCache) Close() error {
+	return r.Client.Close()
+}
+
+func (r *RedisCache) Ping(ctx context.Context) error {
+	_, err := r.Client.Ping(ctx).Result()
+	return err
+}
+
+func (r *RedisCache) Set(ctx context.Context, key string, value interface{}, ttlSeconds int) error {
+	return r.Client.Set(ctx, key, value, time.Duration(ttlSeconds)*time.Second).Err()
+}
+
+func (r *RedisCache) Get(ctx context.Context, key string) (interface{}, error) {
+	val, err := r.Client.Get(ctx, key).Result()
+	if err == redis.Nil {
+		return nil, nil // Key not found
+	}
+	return val, err
+}
+
+func (r *RedisCache) Delete(ctx context.Context, key string) error {
+	return r.Client.Del(ctx, key).Err()
+}
+
+func (r *RedisCache) Flush(ctx context.Context) error {
+	return r.Client.FlushAll(ctx).Err()
 }

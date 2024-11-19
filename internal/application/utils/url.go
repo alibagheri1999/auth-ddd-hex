@@ -6,7 +6,7 @@ import (
 	"net/url"
 )
 
-func GeneratePostgresConnectionString(config config.PostgresConfig) string {
+func GeneratePostgresConnectionString(config config.DatabaseConfig) string {
 	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		url.QueryEscape(config.Username),
 		url.QueryEscape(config.Password),
