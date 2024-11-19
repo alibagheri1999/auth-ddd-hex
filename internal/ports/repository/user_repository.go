@@ -1,9 +1,12 @@
 package repository
 
-import "DDD-HEX/internal/domain"
+import (
+	"DDD-HEX/internal/domain"
+	"context"
+)
 
 type UserRepository interface {
-	Save(user domain.UserEntity) error
-	FindByID(id string) (domain.UserEntity, error)
-	FindByEmail(email string) (domain.UserEntity, error)
+	Save(ctx context.Context, user domain.UserEntity) error
+	FindByID(ctx context.Context, id string) (domain.UserEntity, error)
+	FindByEmail(ctx context.Context, email string) (domain.UserEntity, error)
 }

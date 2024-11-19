@@ -7,15 +7,18 @@ app:
   JWT_SECRET: SAMPLE
   DB_TYPE: postgres
 
-postgres:
+database:
   DB_HOST: 127.0.0.1
   DB_USER: postgres
   DB_PASSWORD: postgres
   DB_NAME: postgres
   DB_PORT: 5555
   SSL_MODE: disable
+  DB_URL: sample
+  MAX_OPEN_CONNS: 0
+  MAX_IDLE_CONNS: 2
 
-redis:
+cache:
   CACHE_HOST: localhost:6379
   CACHE_PASSWORD: redis
   CACHE_DB: 0

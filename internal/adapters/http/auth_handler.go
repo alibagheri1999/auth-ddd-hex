@@ -14,12 +14,12 @@ type AuthHandler struct {
 func (h *AuthHandler) Login(c echo.Context) error {
 	var req DTO.LoginRequest
 	var res DTO.LoginResponse
-
+	ctx := c.Request().Context()
 	if err := c.Bind(&req); err != nil {
 		res.Message = err.Error()
 		return echo.NewHTTPError(http.StatusBadRequest, res)
 	}
-	accessToken, refreshToken, err := h.AuthService.Authenticate(c, req.Email, req.Password)
+	accessToken, refreshToken, err := h.AuthService.Authenticate(ctx, req.Email, req.Password)
 	if err != nil {
 		res.Message = err.Error()
 		return echo.NewHTTPError(http.StatusUnauthorized, res)
@@ -33,9 +33,10 @@ func (h *AuthHandler) Login(c echo.Context) error {
 }
 
 func (h *AuthHandler) Refresh(c echo.Context) error {
+	ctx := c.Request().Context()
 	var res DTO.LoginResponse
 	refreshTokenCookie := c.Request().Header.Get("refresh_token")
-	accessToken, refreshToken, err := h.AuthService.RefreshToken(c, refreshTokenCookie)
+	accessToken, refreshToken, err := h.AuthService.RefreshToken(ctx, refreshTokenCookie)
 	if err != nil {
 		res.Message = err.Error()
 		return echo.NewHTTPError(http.StatusUnauthorized, res)
@@ -50,6 +51,7 @@ func (h *AuthHandler) Refresh(c echo.Context) error {
 }
 
 func (h *AuthHandler) Generate2FACode(c echo.Context) error {
+	ctx := c.Request().Context()
 	var req DTO.GenerateCodeRequest
 	var res DTO.GenerateCodeResponse
 	if err := c.Bind(&req); err != nil {
@@ -58,7 +60,7 @@ func (h *AuthHandler) Generate2FACode(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, res)
 	}
 
-	code, err := h.AuthService.Generate2FACode(c, req.Email)
+	code, err := h.AuthService.Generate2FACode(ctx, req.Email)
 	if err != nil {
 		res.Message = err.Error()
 		return echo.NewHTTPError(http.StatusUnauthorized, res)
@@ -70,6 +72,7 @@ func (h *AuthHandler) Generate2FACode(c echo.Context) error {
 }
 
 func (h *AuthHandler) Validate2FACode(c echo.Context) error {
+	ctx := c.Request().Context()
 	var req DTO.ValidateCodeRequest
 	var res DTO.ValidateCodeResponse
 	if err := c.Bind(&req); err != nil {
@@ -77,12 +80,12 @@ func (h *AuthHandler) Validate2FACode(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, res)
 	}
 
-	err := h.AuthService.Validate2FACode(c, req.Email, req.Code)
+	err := h.AuthService.Validate2FACode(ctx, req.Email, req.Code)
 	if err != nil {
 		res.Message = err.Error()
 		return echo.NewHTTPError(http.StatusUnauthorized, res)
 	}
-	accessToken, refreshToken, err := h.AuthService.GenerateTokens(c, req.Email)
+	accessToken, refreshToken, err := h.AuthService.GenerateTokens(ctx, req.Email)
 	if err != nil {
 		res.Message = err.Error()
 		return echo.NewHTTPError(http.StatusUnauthorized, res)

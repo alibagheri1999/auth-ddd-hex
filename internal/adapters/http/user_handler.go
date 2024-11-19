@@ -12,13 +12,14 @@ type UserHandler struct {
 }
 
 func (h *UserHandler) CreateUser(c echo.Context) error {
+	ctx := c.Request().Context()
 	var req DTO.CreateUserRequest
 	var res DTO.CreateUserResponse
 	if err := c.Bind(&req); err != nil {
 		res.Message = err.Error()
 		return echo.NewHTTPError(http.StatusBadRequest, res)
 	}
-	if err := h.UserService.CreateUser(c, req); err != nil {
+	if err := h.UserService.CreateUser(ctx, req); err != nil {
 		res.Message = err.Error()
 		return echo.NewHTTPError(http.StatusInternalServerError, res)
 	}

@@ -1,55 +1,60 @@
+// internal/application/db/postgres/postgres.go
 package postgres
 
 import (
 	"DDD-HEX/config"
 	"DDD-HEX/internal/application/utils"
+	"DDD-HEX/internal/ports/clients"
+	"context"
 	"database/sql"
-	_ "github.com/lib/pq"
-	"github.com/sirupsen/logrus"
-	"sync"
+	_ "github.com/lib/pq" // PostgreSQL driver
 )
 
-type Repositories struct {
-	Db *sql.DB
-	mu sync.Mutex
+type PostgresDB struct {
+	Db     *sql.DB
+	Config config.DatabaseConfig
 }
 
-// NewRepositories create new my sql instance for other repositories
-func NewRepositories(appConfig config.AppConfig, config config.PostgresConfig) (*Repositories, error) {
-	dsn := utils.GeneratePostgresConnectionString(config)
-	db, err := sql.Open(appConfig.DbType, dsn)
+func NewPostgresDB(config config.DatabaseConfig) clients.Database {
+	return &PostgresDB{
+		Config: config,
+	}
+}
+
+func (p *PostgresDB) Connect() error {
+	dsn := utils.GeneratePostgresConnectionString(p.Config)
+	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		logrus.Info("db connection failed", err)
-	}
-	db.SetMaxOpenConns(0)
-	db.SetMaxIdleConns(2)
-
-	if pingErr := db.Ping(); pingErr != nil {
-		logrus.Info("Err postgres ping", pingErr)
-	} else {
-		logrus.Info("Success postgres connection is ok")
-	}
-
-	return &Repositories{
-		Db: db,
-	}, nil
-}
-
-// Ping pings the database connection
-func (mr *Repositories) Ping() error {
-	if err := mr.Db.Ping(); err != nil {
 		return err
 	}
-
-	return nil
+	p.Db = db
+	return p.Ping()
 }
 
-// DB returns the database connection
-func (mr *Repositories) DB() *sql.DB {
-	return mr.Db
+func (p *PostgresDB) Close() error {
+	return p.Db.Close()
 }
 
-// Close closes the  database connection
-func (mr *Repositories) Close() {
-	_ = mr.Db.Close()
+func (p *PostgresDB) Ping() error {
+	return p.Db.Ping()
+}
+
+// Query executes a query with context
+func (p *PostgresDB) Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
+	return p.Db.QueryContext(ctx, query, args...)
+}
+
+// QueryRow executes a query and returns a single row with context
+func (p *PostgresDB) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row {
+	return p.Db.QueryRowContext(ctx, query, args...)
+}
+
+// Exec executes a query that doesn’t return rows with context
+func (p *PostgresDB) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+	return p.Db.ExecContext(ctx, query, args...)
+}
+
+// Prepare prepares a query for later execution with context
+func (p *PostgresDB) Prepare(ctx context.Context, query string) (*sql.Stmt, error) {
+	return p.Db.PrepareContext(ctx, query)
 }

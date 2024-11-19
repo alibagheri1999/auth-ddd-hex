@@ -7,9 +7,9 @@ import (
 	"DDD-HEX/internal/domain"
 	"DDD-HEX/internal/ports/cache"
 	"DDD-HEX/internal/ports/repository"
+	"context"
 	"errors"
 	"github.com/dgrijalva/jwt-go"
-	"github.com/labstack/echo/v4"
 	"time"
 )
 
@@ -24,8 +24,8 @@ func NewAuthService(authRepo repository.AuthRepository, userService user.UserSer
 	return &authServiceImpl{authRepository: authRepo, userService: userService, appConfig: appConfig, cacheRepo: cacheRepo}
 }
 
-func (s *authServiceImpl) Authenticate(c echo.Context, email, password string) (string, string, error) {
-	failedCount, err := HandleFailLogin(email, s.cacheRepo)
+func (s *authServiceImpl) Authenticate(c context.Context, email, password string) (string, string, error) {
+	failedCount, err := HandleFailLogin(c, email, s.cacheRepo)
 	if err != nil {
 		return "", "", err
 	}
@@ -34,7 +34,7 @@ func (s *authServiceImpl) Authenticate(c echo.Context, email, password string) (
 	validPass := utils.CheckHash(password, user.Password.String)
 	if err != nil || !validPass {
 		failedCount += 1
-		if sErr := s.cacheRepo.SetFailedCount(email, failedCount); sErr != nil {
+		if sErr := s.cacheRepo.SetFailedCount(c, email, failedCount); sErr != nil {
 			return "", "", sErr
 		}
 		if err == nil && !validPass {
@@ -58,15 +58,15 @@ func (s *authServiceImpl) Authenticate(c echo.Context, email, password string) (
 		Expires:      time.Now().Add(time.Duration(accessTokenExp) * time.Minute).Unix(),
 	}
 
-	if err := s.authRepository.Save(auth); err != nil {
+	if err := s.authRepository.Save(c, auth); err != nil {
 		return "", "", err
 	}
 
 	return accessToken, refreshToken, nil
 }
 
-func (s *authServiceImpl) RefreshToken(c echo.Context, refreshToken string) (string, string, error) {
-	auth, err := s.authRepository.FindByRefreshToken(refreshToken)
+func (s *authServiceImpl) RefreshToken(c context.Context, refreshToken string) (string, string, error) {
+	auth, err := s.authRepository.FindByRefreshToken(c, refreshToken)
 	if err != nil {
 		return "", "", err
 	}
@@ -92,14 +92,14 @@ func (s *authServiceImpl) RefreshToken(c echo.Context, refreshToken string) (str
 		AccessToken:  auth.AccessToken,
 		RefreshToken: auth.RefreshToken,
 	}
-	if err := s.authRepository.Save(newAuth); err != nil {
+	if err := s.authRepository.Save(c, newAuth); err != nil {
 		return "", "", err
 	}
 
 	return accessToken, newRefreshToken, nil
 }
 
-func (s *authServiceImpl) generateTokens(c echo.Context, user *domain.UserEntity) (string, string, error) {
+func (s *authServiceImpl) generateTokens(c context.Context, user *domain.UserEntity) (string, string, error) {
 	refreshTokenExp := s.appConfig.RefreshTokenExp
 	accessTokenExp := s.appConfig.AccessTokenExp
 	accessTokenClaims := jwt.MapClaims{
@@ -131,7 +131,7 @@ func (s *authServiceImpl) generateTokens(c echo.Context, user *domain.UserEntity
 	return accessTokenString, refreshTokenString, nil
 }
 
-func (s *authServiceImpl) GenerateTokens(c echo.Context, email string) (string, string, error) {
+func (s *authServiceImpl) GenerateTokens(c context.Context, email string) (string, string, error) {
 	user, err := s.userService.FindUserByEmail(c, email)
 	if err != nil {
 		return "", "", err
@@ -166,17 +166,17 @@ func (s *authServiceImpl) GenerateTokens(c echo.Context, email string) (string, 
 	return accessTokenString, refreshTokenString, nil
 }
 
-func (s *authServiceImpl) Generate2FACode(c echo.Context, username string) (string, error) {
+func (s *authServiceImpl) Generate2FACode(c context.Context, username string) (string, error) {
 	code := GenerateRandomCode(6)
-	if err := s.cacheRepo.Set2FA(username, code); err != nil {
+	if err := s.cacheRepo.Set2FA(c, username, code); err != nil {
 		return "", err
 	}
 	// Send code via email (implementation omitted)
 	return code, nil
 }
 
-func (s *authServiceImpl) Validate2FACode(c echo.Context, username, code string) error {
-	storedCode, err := s.cacheRepo.Get2FA(username)
+func (s *authServiceImpl) Validate2FACode(c context.Context, username, code string) error {
+	storedCode, err := s.cacheRepo.Get2FA(c, username)
 	if err != nil || storedCode != code {
 		return errors.New("invalid 2FA code")
 	}

@@ -1,13 +1,13 @@
 package middleware
 
 import (
-	"DDD-HEX/internal/adapters/db/postgres"
+	"DDD-HEX/internal/ports/clients"
 	"github.com/labstack/echo/v4"
 	"log"
 	"net/http"
 )
 
-func HealthCheck(mysqlRepo *postgres.Repositories) echo.MiddlewareFunc {
+func HealthCheck(mysqlRepo clients.Database) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 

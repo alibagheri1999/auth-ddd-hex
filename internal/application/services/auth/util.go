@@ -3,6 +3,7 @@ package auth
 import (
 	"DDD-HEX/internal/application/utils"
 	"DDD-HEX/internal/ports/cache"
+	"context"
 	"errors"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
@@ -34,16 +35,16 @@ func GenerateRandomCode(length int) string {
 	return string(code)
 }
 
-func HandleFailLogin(email string, cacheRepo cache.CacheRepository) (int, error) {
-	failedCount := cacheRepo.GetFailedCount(email)
-	lastFailed := cacheRepo.GetLastFailed(email)
+func HandleFailLogin(ctx context.Context, email string, cacheRepo cache.CacheRepository) (int, error) {
+	failedCount := cacheRepo.GetFailedCount(ctx, email)
+	lastFailed := cacheRepo.GetLastFailed(ctx, email)
 	duration := utils.CalculateTimeDifference(lastFailed)
 	text := fmt.Sprintf("please try again after %v mins, you rached 3 fail tries", duration.Minutes())
 	if failedCount == 3 {
-		if sErr := cacheRepo.SetFailedCount(email, 0); sErr != nil {
+		if sErr := cacheRepo.SetFailedCount(ctx, email, 0); sErr != nil {
 			return 0, sErr
 		}
-		if sErr := cacheRepo.SetLastFailed(email, time.Now()); sErr != nil {
+		if sErr := cacheRepo.SetLastFailed(ctx, email, time.Now()); sErr != nil {
 			return 0, sErr
 		}
 		text := fmt.Sprintf("please try again after %d mins, you rached 3 fail tries", 10)

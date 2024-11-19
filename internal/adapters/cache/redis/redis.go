@@ -15,7 +15,7 @@ type ClientWrapper struct {
 	Client *redis.Client
 }
 
-func NewRedisClientWrapper(config config.RedisConfig) *ClientWrapper {
+func NewRedisClientWrapper(config config.CacheConfig) *ClientWrapper {
 	client, err := NewRedisClient(config)
 	if err != nil {
 		logrus.Error("Failed to connect to Redis with err ", err.Error())
@@ -26,7 +26,7 @@ func NewRedisClientWrapper(config config.RedisConfig) *ClientWrapper {
 	}
 }
 
-func NewRedisClient(config config.RedisConfig) (*redis.Client, error) {
+func NewRedisClient(config config.CacheConfig) (*redis.Client, error) {
 	client := redis.NewClient(&redis.Options{
 		Addr:     config.Host,
 		Password: config.Password,
