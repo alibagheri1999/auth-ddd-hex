@@ -14,21 +14,16 @@ type RedisCache struct {
 	Config config.CacheConfig
 }
 
-func NewRedisCache(config config.CacheConfig) clients.Cache {
+func NewRedisCache(ctx context.Context, config config.CacheConfig) clients.Cache {
 	client := redis.NewClient(&redis.Options{
 		Addr:     config.Host,
 		Password: config.Password,
 		DB:       config.DB,
 	})
 
-	// Test connection
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
 	if _, err := client.Ping(ctx).Result(); err != nil {
 		logrus.Fatalf("Failed to connect to Redis: %v", err)
 	}
-
 	return &RedisCache{
 		Client: client,
 		Config: config,
@@ -45,7 +40,7 @@ func (r *RedisCache) EnsureConnected(maxRetries int) error {
 
 		_, err = r.Client.Ping(ctx).Result()
 		if err == nil {
-			logrus.Info("Successfully reconnected to Redis")
+			logrus.Info("Successfully connected to Redis")
 			return nil
 		}
 
@@ -74,10 +69,10 @@ func (r *RedisCache) Set(ctx context.Context, key string, value interface{}, ttl
 	return r.Client.Set(ctx, key, value, time.Duration(ttlSeconds)*time.Second).Err()
 }
 
-func (r *RedisCache) Get(ctx context.Context, key string) (interface{}, error) {
+func (r *RedisCache) Get(ctx context.Context, key string) (string, error) {
 	val, err := r.Client.Get(ctx, key).Result()
 	if err == redis.Nil {
-		return nil, nil // Key not found
+		return "", nil
 	}
 	return val, err
 }

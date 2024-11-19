@@ -7,7 +7,7 @@ import (
 	"DDD-HEX/internal/ports/cache"
 	"DDD-HEX/internal/ports/clients"
 	"DDD-HEX/internal/ports/repository"
-	"log"
+	"github.com/sirupsen/logrus"
 )
 
 type Repositories struct {
@@ -19,11 +19,11 @@ type Repositories struct {
 func SetupRepositories(appCfg config.AppConfig, DB clients.Database, cacheClient clients.Cache) *Repositories {
 	repositories, err := db.NewRepository(appCfg.DbType, DB)
 	if err != nil {
-		log.Fatal("Failed to create repositories:", err)
+		logrus.Fatal("Failed to create repositories:", err)
 	}
 	cacheRepo, err := cacheFactory.NewCacheRepository(appCfg.CacheType, cacheClient)
 	if err != nil {
-		log.Fatal("Failed to initialize cache:", err)
+		logrus.Fatal("Failed to initialize cache:", err)
 	}
 	return &Repositories{
 		UserRepository:  repositories.NewUserRepository(DB),

@@ -26,7 +26,7 @@ func (r *CacheRepository) Get2FA(ctx context.Context, username string) (string, 
 	if err != nil {
 		return "", err
 	}
-	return val.(string), nil
+	return val, nil
 }
 
 func (r *CacheRepository) SetFailedCount(ctx context.Context, username string, count int) error {
@@ -40,7 +40,7 @@ func (r *CacheRepository) GetFailedCount(ctx context.Context, username string) i
 	if err != nil {
 		return 0 // Default if key is missing
 	}
-	count, err := strconv.Atoi(val.(string))
+	count, err := strconv.Atoi(val)
 	if err != nil {
 		return 0
 	}
@@ -59,7 +59,7 @@ func (r *CacheRepository) GetLastFailed(ctx context.Context, username string) ti
 	if err != nil {
 		return time.Time{} // Default if key is missing
 	}
-	lastTime, err := time.Parse(time.RFC3339, val.(string))
+	lastTime, err := time.Parse(time.RFC3339, val)
 	if err != nil {
 		return time.Time{}
 	}

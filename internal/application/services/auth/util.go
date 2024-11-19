@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
+	"math"
 	"math/rand"
 	"time"
 )
@@ -39,7 +40,7 @@ func HandleFailLogin(ctx context.Context, email string, cacheRepo cache.CacheRep
 	failedCount := cacheRepo.GetFailedCount(ctx, email)
 	lastFailed := cacheRepo.GetLastFailed(ctx, email)
 	duration := utils.CalculateTimeDifference(lastFailed)
-	text := fmt.Sprintf("please try again after %v mins, you rached 3 fail tries", duration.Minutes())
+	text := fmt.Sprintf("please try again after %v mins, you rached 3 fail tries", 10-math.Floor(duration.Minutes()))
 	if failedCount == 3 {
 		if sErr := cacheRepo.SetFailedCount(ctx, email, 0); sErr != nil {
 			return 0, sErr

@@ -2,6 +2,7 @@ package http
 
 import (
 	"DDD-HEX/internal/application/services/auth"
+	"DDD-HEX/internal/application/utils"
 	"DDD-HEX/internal/domain/DTO"
 	"github.com/labstack/echo/v4"
 	"net/http"
@@ -17,6 +18,10 @@ func (h *AuthHandler) Login(c echo.Context) error {
 	ctx := c.Request().Context()
 	if err := c.Bind(&req); err != nil {
 		res.Message = err.Error()
+		return echo.NewHTTPError(http.StatusBadRequest, res)
+	}
+	if !utils.IsValidEmail(req.Email) {
+		res.Message = "Enter a valid email"
 		return echo.NewHTTPError(http.StatusBadRequest, res)
 	}
 	accessToken, refreshToken, err := h.AuthService.Authenticate(ctx, req.Email, req.Password)
@@ -59,7 +64,10 @@ func (h *AuthHandler) Generate2FACode(c echo.Context) error {
 		res.Code = ""
 		return echo.NewHTTPError(http.StatusBadRequest, res)
 	}
-
+	if !utils.IsValidEmail(req.Email) {
+		res.Message = "Enter a valid email"
+		return echo.NewHTTPError(http.StatusBadRequest, res)
+	}
 	code, err := h.AuthService.Generate2FACode(ctx, req.Email)
 	if err != nil {
 		res.Message = err.Error()
@@ -79,7 +87,10 @@ func (h *AuthHandler) Validate2FACode(c echo.Context) error {
 		res.Message = err.Error()
 		return echo.NewHTTPError(http.StatusBadRequest, res)
 	}
-
+	if !utils.IsValidEmail(req.Email) {
+		res.Message = "Enter a valid email"
+		return echo.NewHTTPError(http.StatusBadRequest, res)
+	}
 	err := h.AuthService.Validate2FACode(ctx, req.Email, req.Code)
 	if err != nil {
 		res.Message = err.Error()

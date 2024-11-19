@@ -6,6 +6,7 @@ import (
 	"DDD-HEX/internal/ports/clients"
 	"errors"
 	"fmt"
+	"github.com/sirupsen/logrus"
 )
 
 func NewDatabase(appConfig config.AppConfig, dbConfig config.DatabaseConfig) (clients.Database, error) {
@@ -20,5 +21,6 @@ func NewDatabase(appConfig config.AppConfig, dbConfig config.DatabaseConfig) (cl
 	if err != nil {
 		return nil, err
 	}
+	logrus.Printf("Successfully connected to %s\n", appConfig.DbType)
 	return database, nil
 }

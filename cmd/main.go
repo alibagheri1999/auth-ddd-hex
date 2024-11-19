@@ -7,8 +7,9 @@ import (
 	"DDD-HEX/internal/adapters/db"
 	"DDD-HEX/internal/application/utils"
 	middlewares "DDD-HEX/pkg/middleware"
+	"context"
 	_ "github.com/lib/pq"
-	"log"
+	"github.com/sirupsen/logrus"
 	"time"
 )
 
@@ -18,19 +19,22 @@ func main() {
 	appCfg := config.App
 	dbCfg := config.Database
 	cacheCfg := config.Cache
-	cache, err := cache.NewCacheFactory(appCfg.CacheType, cacheCfg)
+	// Redis context
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	cache, err := cache.NewCacheFactory(ctx, appCfg.CacheType, cacheCfg)
 	if err != nil {
-		log.Fatal("Failed to initialize cache:", err)
+		logrus.Fatal("Failed to initialize cache:", err)
 	}
 	go func() {
 		err := cache.EnsureConnected(3)
 		if err != nil {
-			log.Fatal("Failed to ensure Redis connection:", err)
+			logrus.Fatal("Failed to ensure Redis connection:", err)
 		}
 	}()
 	DB, err := db.NewDatabase(appCfg, dbCfg)
 	if err != nil {
-		log.Fatal("Failed to connect to the database:", err)
+		logrus.Fatal("Failed to connect to the database:", err)
 	}
 	repositories := setup.SetupRepositories(appCfg, DB, cache)
 	services := setup.SetupServices(repositories, appCfg)

@@ -3,7 +3,7 @@ package middleware
 import (
 	"DDD-HEX/internal/ports/clients"
 	"github.com/labstack/echo/v4"
-	"log"
+	"github.com/sirupsen/logrus"
 	"net/http"
 )
 
@@ -13,7 +13,7 @@ func HealthCheck(mysqlRepo clients.Database) echo.MiddlewareFunc {
 
 			isDown := false
 			if err := mysqlRepo.Ping(); err != nil {
-				log.Printf("Err http health check middleware, can't ping mysql %v\n", err)
+				logrus.Info("Err http health check middleware, can't ping mysql %v\n", err)
 				isDown = true
 			}
 			if isDown {
