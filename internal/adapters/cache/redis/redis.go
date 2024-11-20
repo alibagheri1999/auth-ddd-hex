@@ -65,7 +65,7 @@ func (r *RedisCache) Ping(ctx context.Context) error {
 	return err
 }
 
-func (r *RedisCache) Set(ctx context.Context, key string, value interface{}, ttlSeconds int) error {
+func (r *RedisCache) Set(ctx context.Context, key string, value interface{}, ttlSeconds uint32) error {
 	return r.Client.Set(ctx, key, value, time.Duration(ttlSeconds)*time.Second).Err()
 }
 

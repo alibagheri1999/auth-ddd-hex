@@ -12,4 +12,6 @@ type CacheRepository interface {
 	GetFailedCount(ctx context.Context, username string) int
 	SetLastFailed(ctx context.Context, username string, last time.Time) error
 	GetLastFailed(ctx context.Context, username string) time.Time
+	Set(ctx context.Context, key, value string, ttl uint32) error
+	Get(ctx context.Context, key string) (string, error)
 }

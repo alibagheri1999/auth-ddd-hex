@@ -17,7 +17,7 @@ func (r *CacheRepository) EnsureConnected(maxRetries int) error {
 
 func (r *CacheRepository) Set2FA(ctx context.Context, username, code string) error {
 	key := "2fa:" + username
-	return r.Cache.Set(ctx, key, code, 120) // 2 minutes TTL
+	return r.Cache.Set(ctx, key, code, uint32(120)) // 2 minutes TTL
 }
 
 func (r *CacheRepository) Get2FA(ctx context.Context, username string) (string, error) {
@@ -29,9 +29,21 @@ func (r *CacheRepository) Get2FA(ctx context.Context, username string) (string, 
 	return val, nil
 }
 
+func (r *CacheRepository) Set(ctx context.Context, key, value string, ttl uint32) error {
+	return r.Cache.Set(ctx, key, value, uint32(ttl))
+}
+
+func (r *CacheRepository) Get(ctx context.Context, key string) (string, error) {
+	val, err := r.Cache.Get(ctx, key)
+	if err != nil {
+		return "", err
+	}
+	return val, nil
+}
+
 func (r *CacheRepository) SetFailedCount(ctx context.Context, username string, count int) error {
 	key := "fc:" + username
-	return r.Cache.Set(ctx, key, count, 300) // 5 minutes TTL
+	return r.Cache.Set(ctx, key, count, uint32(300)) // 5 minutes TTL
 }
 
 func (r *CacheRepository) GetFailedCount(ctx context.Context, username string) int {
@@ -50,7 +62,7 @@ func (r *CacheRepository) GetFailedCount(ctx context.Context, username string) i
 func (r *CacheRepository) SetLastFailed(ctx context.Context, username string, last time.Time) error {
 	key := "lf:" + username
 	lastStr := last.Format(time.RFC3339)
-	return r.Cache.Set(ctx, key, lastStr, 600) // 10 minutes TTL
+	return r.Cache.Set(ctx, key, lastStr, uint32(600)) // 10 minutes TTL
 }
 
 func (r *CacheRepository) GetLastFailed(ctx context.Context, username string) time.Time {

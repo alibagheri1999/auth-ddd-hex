@@ -66,8 +66,9 @@ func (s *authServiceImpl) Authenticate(c context.Context, email, password string
 }
 
 func (s *authServiceImpl) RefreshToken(c context.Context, refreshToken string) (string, string, error) {
-	auth, err := s.authRepository.FindByRefreshToken(c, refreshToken)
-	if err != nil {
+	var auth domain.UserAuthEntity
+	var err error
+	if auth, err = s.authRepository.FindByRefreshToken(c, refreshToken); err != nil {
 		return "", "", err
 	}
 	if auth.Status == "deactivated" {
@@ -95,7 +96,6 @@ func (s *authServiceImpl) RefreshToken(c context.Context, refreshToken string) (
 	if err := s.authRepository.Save(c, newAuth); err != nil {
 		return "", "", err
 	}
-
 	return accessToken, newRefreshToken, nil
 }
 
