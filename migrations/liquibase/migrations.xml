@@ -73,4 +73,8 @@
                                  referencedTableName="users"
                                  referencedColumnNames="id"/>
     </changeSet>
+    <changeSet author="Ali" id="create_index">
+        <query>CREATE INDEX idx_user_email ON users(email);</query>
+        <query>CREATE INDEX idx_auth_user_id ON auth(user_id);</query>
+    </changeSet>
 </databaseChangeLog>

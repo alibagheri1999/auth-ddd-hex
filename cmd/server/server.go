@@ -1,6 +1,7 @@
 package server
 
 import (
+	"DDD-HEX/internal/ports/clients"
 	"context"
 	"fmt"
 	"github.com/labstack/echo/v4"
@@ -26,7 +27,7 @@ type Server struct {
 }
 
 // StartListening force server to start listening on a port
-func (s *Server) StartListening() {
+func (s *Server) StartListening(cache clients.Cache, db clients.Database) {
 	logrus.Info(fmt.Sprintf("server start to listen on %s\n", s.addr))
 	go func() {
 		if err := s.router.Start(s.addr); err != nil && err != http.ErrServerClosed {
@@ -43,7 +44,8 @@ func (s *Server) StartListening() {
 	if err := s.router.Shutdown(c); err != nil {
 		logrus.Info("Err server shutdown", err)
 	}
-
+	db.Close()
+	cache.Close()
 	<-c.Done()
 	logrus.Info("Good Luck!")
 }

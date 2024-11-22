@@ -109,7 +109,6 @@ func findRootDirectory(currentDir, markerFile string) string {
 		if _, err := os.Stat(filepath.Join(currentDir, markerFile)); err == nil {
 			return currentDir
 		}
-
 		// Move up one directory
 		newDir := filepath.Dir(currentDir)
 		if newDir == currentDir {

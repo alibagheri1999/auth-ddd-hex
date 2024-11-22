@@ -8,6 +8,7 @@ import (
 	"context"
 	"database/sql"
 	_ "github.com/lib/pq" // PostgreSQL driver
+	"time"
 )
 
 type PostgresDB struct {
@@ -27,6 +28,9 @@ func (p *PostgresDB) Connect() error {
 	if err != nil {
 		return err
 	}
+	db.SetMaxOpenConns(p.Config.MaxOpenConns) // Max number of open connections
+	db.SetMaxIdleConns(p.Config.MaxIdleConns) // Max number of idle connections
+	db.SetConnMaxLifetime(30 * time.Minute)   // Max lifetime of a connection
 	p.Db = db
 	return p.Ping()
 }

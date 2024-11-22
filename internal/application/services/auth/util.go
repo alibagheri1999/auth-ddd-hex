@@ -2,8 +2,10 @@ package auth
 
 import (
 	"DDD-HEX/internal/application/utils"
+	"DDD-HEX/internal/domain/DTO"
 	"DDD-HEX/internal/ports/cache"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
@@ -55,4 +57,24 @@ func HandleFailLogin(ctx context.Context, email string, cacheRepo cache.CacheRep
 		return 0, errors.New(text)
 	}
 	return failedCount, nil
+}
+
+func GetUserTokens(ctx context.Context, email string, cacheRepo cache.CacheRepository) *DTO.UserTokens {
+	key := fmt.Sprintf("user-tokens:%s", email)
+	strTokens, err := cacheRepo.Get(ctx, key)
+	if err != nil {
+		return nil
+	}
+	var tokens DTO.UserTokens
+	err = json.Unmarshal([]byte(strTokens), &tokens)
+	if err != nil {
+		return nil
+	}
+	return &tokens
+}
+
+func SetUserTokens(ctx context.Context, email string, cacheRepo cache.CacheRepository, tokens DTO.UserTokens) {
+	key := fmt.Sprintf("user-tokens:%s", email)
+	tokenBytes, _ := json.Marshal(tokens)
+	_ = cacheRepo.Set(ctx, key, string(tokenBytes), tokens.TTL)
 }

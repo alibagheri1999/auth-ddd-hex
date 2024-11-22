@@ -5,6 +5,7 @@ import (
 	"DDD-HEX/internal/application/services/user"
 	"DDD-HEX/internal/application/utils"
 	"DDD-HEX/internal/domain"
+	"DDD-HEX/internal/domain/DTO"
 	"DDD-HEX/internal/ports/cache"
 	"DDD-HEX/internal/ports/repository"
 	"context"
@@ -45,7 +46,10 @@ func (s *authServiceImpl) Authenticate(c context.Context, email, password string
 	if user.Status == "deactivated" {
 		return "", "", errors.New("user is deactivated")
 	}
-
+	tokens := GetUserTokens(c, email, s.cacheRepo)
+	if tokens != nil {
+		return tokens.AccessToken, tokens.RefreshToken, nil
+	}
 	accessToken, refreshToken, err := s.generateTokens(c, user)
 	if err != nil {
 		return "", "", err
@@ -61,7 +65,12 @@ func (s *authServiceImpl) Authenticate(c context.Context, email, password string
 	if err := s.authRepository.Save(c, auth); err != nil {
 		return "", "", err
 	}
-
+	tokens = &DTO.UserTokens{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		TTL:          uint32(s.appConfig.AccessTokenExp),
+	}
+	SetUserTokens(c, email, s.cacheRepo, *tokens)
 	return accessToken, refreshToken, nil
 }
 
@@ -78,6 +87,10 @@ func (s *authServiceImpl) RefreshToken(c context.Context, refreshToken string) (
 		Rule:  auth.Rule,
 		Email: auth.Email,
 		ID:    auth.UserID,
+	}
+	tokens := GetUserTokens(c, auth.Email, s.cacheRepo)
+	if tokens != nil {
+		return tokens.AccessToken, tokens.RefreshToken, nil
 	}
 	accessToken, newRefreshToken, err := s.generateTokens(c, user)
 	if err != nil {
@@ -96,10 +109,16 @@ func (s *authServiceImpl) RefreshToken(c context.Context, refreshToken string) (
 	if err := s.authRepository.Save(c, newAuth); err != nil {
 		return "", "", err
 	}
+	tokens = &DTO.UserTokens{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		TTL:          uint32(s.appConfig.AccessTokenExp),
+	}
+	SetUserTokens(c, auth.Email, s.cacheRepo, *tokens)
 	return accessToken, newRefreshToken, nil
 }
 
-func (s *authServiceImpl) generateTokens(c context.Context, user *domain.UserEntity) (string, string, error) {
+func (s *authServiceImpl) generateTokens(_ context.Context, user *domain.UserEntity) (string, string, error) {
 	refreshTokenExp := s.appConfig.RefreshTokenExp
 	accessTokenExp := s.appConfig.AccessTokenExp
 	accessTokenClaims := jwt.MapClaims{
@@ -131,7 +150,7 @@ func (s *authServiceImpl) generateTokens(c context.Context, user *domain.UserEnt
 	return accessTokenString, refreshTokenString, nil
 }
 
-func (s *authServiceImpl) GenerateTokens(c context.Context, email string) (string, string, error) {
+func (s *authServiceImpl) Validate2FA(c context.Context, email string) (string, string, error) {
 	user, err := s.userService.FindUserByEmail(c, email)
 	if err != nil {
 		return "", "", err
@@ -139,31 +158,29 @@ func (s *authServiceImpl) GenerateTokens(c context.Context, email string) (strin
 	if user.Status == "deactivated" {
 		return "", "", errors.New("user is deactivated")
 	}
-	refreshTokenExp := s.appConfig.RefreshTokenExp
+	tokens := GetUserTokens(c, email, s.cacheRepo)
+	if tokens != nil {
+		return tokens.AccessToken, tokens.RefreshToken, nil
+	}
 	accessTokenExp := s.appConfig.AccessTokenExp
-	accessTokenClaims := jwt.MapClaims{
-		"user_id": user.ID,
-		"exp":     time.Now().Add(time.Duration(accessTokenExp) * time.Minute).Unix(), // 15 minutes
+	accessToken, refreshToken, err := s.generateTokens(c, user)
+	auth := domain.AuthEntity{
+		UserID:       user.ID,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		Expires:      time.Now().Add(time.Duration(accessTokenExp) * time.Minute).Unix(),
 	}
 
-	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessTokenClaims)
-	accessTokenString, err := accessToken.SignedString([]byte(s.appConfig.JwtSecret))
-	if err != nil {
+	if err := s.authRepository.Save(c, auth); err != nil {
 		return "", "", err
 	}
-
-	refreshTokenClaims := jwt.MapClaims{
-		"user_id": user.ID,
-		"exp":     time.Now().Add(time.Duration(refreshTokenExp) * time.Hour).Unix(), // 7 weeks
+	tokens = &DTO.UserTokens{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		TTL:          uint32(s.appConfig.AccessTokenExp),
 	}
-
-	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshTokenClaims)
-	refreshTokenString, err := refreshToken.SignedString([]byte(s.appConfig.JwtSecret))
-	if err != nil {
-		return "", "", err
-	}
-
-	return accessTokenString, refreshTokenString, nil
+	SetUserTokens(c, email, s.cacheRepo, *tokens)
+	return accessToken, refreshToken, nil
 }
 
 func (s *authServiceImpl) Generate2FACode(c context.Context, username string) (string, error) {

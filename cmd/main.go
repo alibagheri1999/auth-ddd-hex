@@ -10,6 +10,8 @@ import (
 	"context"
 	_ "github.com/lib/pq"
 	"github.com/sirupsen/logrus"
+	"net/http"
+	_ "net/http/pprof"
 	"time"
 )
 
@@ -42,5 +44,15 @@ func main() {
 	router := server.NewRouter()
 	router.Use(middlewares.HealthCheck(DB))
 	server.RegisterRoutes(router, handlers)
-	server.NewServer(router, appCfg.Port, time.Duration(1)).StartListening()
+
+	// Start HTTP server for pprof profiling
+	go func() {
+		logrus.Println("Starting pprof server on :6060")
+		err := http.ListenAndServe("localhost:6060", nil)
+		if err != nil {
+			logrus.Fatal("Failed to start pprof server:", err)
+		}
+	}()
+
+	server.NewServer(router, appCfg.Port, time.Duration(1)).StartListening(cache, DB)
 }

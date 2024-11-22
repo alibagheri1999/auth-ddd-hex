@@ -16,8 +16,8 @@ database:
   DB_PORT: 5555
   SSL_MODE: disable
   DB_URL: sample
-  MAX_OPEN_CONNS: 0
-  MAX_IDLE_CONNS: 2
+  MAX_OPEN_CONNS: 500
+  MAX_IDLE_CONNS: 100
 
 cache:
   CACHE_HOST: localhost:6379

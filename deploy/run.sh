@@ -7,6 +7,10 @@ run() {
   go run ../cmd/main.go
 }
 
+build() {
+  go build -o auth_service ../cmd/main.go
+}
+
 compose(){
   docker compose --file docker-compose.yml --env-file .env up -d
 }
@@ -42,6 +46,8 @@ case "$1" in
 run)
   run
   ;;
+build)
+  build;;
 compose)
   compose
   ;;

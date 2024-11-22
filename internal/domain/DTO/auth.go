@@ -30,3 +30,9 @@ type ValidateCodeRequest struct {
 	Email string `json:"email"`
 	Code  string `json:"code"`
 }
+
+type UserTokens struct {
+	AccessToken  string
+	RefreshToken string
+	TTL          uint32
+}

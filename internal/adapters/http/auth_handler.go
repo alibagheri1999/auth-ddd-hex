@@ -96,7 +96,7 @@ func (h *AuthHandler) Validate2FACode(c echo.Context) error {
 		res.Message = err.Error()
 		return echo.NewHTTPError(http.StatusUnauthorized, res)
 	}
-	accessToken, refreshToken, err := h.AuthService.GenerateTokens(ctx, req.Email)
+	accessToken, refreshToken, err := h.AuthService.Validate2FA(ctx, req.Email)
 	if err != nil {
 		res.Message = err.Error()
 		return echo.NewHTTPError(http.StatusUnauthorized, res)
