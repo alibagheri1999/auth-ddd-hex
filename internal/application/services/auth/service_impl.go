@@ -19,10 +19,11 @@ type authServiceImpl struct {
 	userService    user.UserService
 	cacheRepo      cache.CacheRepository
 	appConfig      config.AppConfig
+	checkHashFunc  utils.CheckHashFunc
 }
 
-func NewAuthService(authRepo repository.AuthRepository, userService user.UserService, cacheRepo cache.CacheRepository, appConfig config.AppConfig) AuthService {
-	return &authServiceImpl{authRepository: authRepo, userService: userService, appConfig: appConfig, cacheRepo: cacheRepo}
+func NewAuthService(authRepo repository.AuthRepository, userService user.UserService, cacheRepo cache.CacheRepository, appConfig config.AppConfig, checkHashFunc utils.CheckHashFunc) AuthService {
+	return &authServiceImpl{authRepository: authRepo, userService: userService, appConfig: appConfig, cacheRepo: cacheRepo, checkHashFunc: checkHashFunc}
 }
 
 func (s *authServiceImpl) Authenticate(c context.Context, email, password string) (string, string, error) {
@@ -32,7 +33,7 @@ func (s *authServiceImpl) Authenticate(c context.Context, email, password string
 	}
 	accessTokenExp := s.appConfig.AccessTokenExp
 	user, err := s.userService.FindUserByEmail(c, email)
-	validPass := utils.CheckHash(password, user.Password.String)
+	validPass := s.checkHashFunc(password, user.Password.String)
 	if err != nil || !validPass {
 		failedCount += 1
 		if sErr := s.cacheRepo.SetFailedCount(c, email, failedCount); sErr != nil {

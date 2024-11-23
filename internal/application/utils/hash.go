@@ -11,7 +11,11 @@ func Hash(input string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func CheckHash(input, hashedInput string) bool {
+type CheckHashFunc func(input, hashedInput string) bool
+
+var CheckHash CheckHashFunc
+
+func DefaultCheckHash(input, hashedInput string) bool {
 	hash := Hash(input)
 	return hash == hashedInput
 }

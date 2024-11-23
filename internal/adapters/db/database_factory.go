@@ -22,6 +22,5 @@ func NewDatabase(appConfig config.AppConfig, dbConfig config.DatabaseConfig) (cl
 		return nil, err
 	}
 	logrus.Printf("Successfully connected to %s\n", appConfig.DbType)
-	defer database.Close()
 	return database, nil
 }
